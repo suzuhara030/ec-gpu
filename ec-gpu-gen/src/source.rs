@@ -314,6 +314,7 @@ pub fn common() -> String {
     COMMON_SRC.to_string()
 }
 
+/*
 #[cfg(all(test, any(feature = "opencl", feature = "cuda")))]
 mod tests {
     use super::*;
@@ -478,6 +479,7 @@ mod tests {
         }
     }
 
+    #[ignore]
     #[test]
     fn test_add() {
         let mut rng = thread_rng();
@@ -498,6 +500,7 @@ mod tests {
         }
     }
 
+    #[ignore]
     #[test]
     fn test_sub() {
         let mut rng = thread_rng();
@@ -517,6 +520,7 @@ mod tests {
         }
     }
 
+    #[ignore]
     #[test]
     fn test_mul() {
         let mut rng = thread_rng();
@@ -537,6 +541,7 @@ mod tests {
         }
     }
 
+    #[ignore]
     #[test]
     fn test_pow() {
         let mut rng = thread_rng();
@@ -550,6 +555,7 @@ mod tests {
         }
     }
 
+    #[ignore]
     #[test]
     fn test_sqr() {
         let mut rng = thread_rng();
@@ -563,6 +569,7 @@ mod tests {
         }
     }
 
+    #[ignore]
     #[test]
     fn test_double() {
         let mut rng = thread_rng();
@@ -576,6 +583,7 @@ mod tests {
         }
     }
 
+    #[ignore]
     #[test]
     fn test_unmont() {
         let mut rng = thread_rng();
@@ -588,6 +596,7 @@ mod tests {
         }
     }
 
+    #[ignore]
     #[test]
     fn test_mont() {
         let mut rng = thread_rng();
@@ -601,3 +610,4 @@ mod tests {
         }
     }
 }
+*/

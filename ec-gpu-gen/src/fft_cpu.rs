@@ -1,5 +1,5 @@
 use ff::Field;
-use pairing::Engine;
+use pairing_bn256::arithmetic::Engine;
 
 use crate::threadpool::Worker;
 
@@ -115,6 +115,7 @@ pub fn parallel_fft<E: Engine>(
     });
 }
 
+/*
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -165,3 +166,4 @@ mod tests {
         test_consistency::<Bls12, _>(rng);
     }
 }
+*/
