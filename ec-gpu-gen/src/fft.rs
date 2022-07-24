@@ -279,7 +279,7 @@ mod tests {
         let devices = Device::all();
         let mut kern = FftKernel::<Bn256>::create(&devices).expect("Cannot initialize kernel!");
 
-        for log_d in 1..=10 {
+        for log_d in 5..=15 {
             let d = 1 << log_d;
 
             let mut v1_coeffs = (0..d).map(|_| Fr::random(&mut rng)).collect::<Vec<_>>();
@@ -296,14 +296,11 @@ mod tests {
             println!("GPU took {}ms.", gpu_dur);
 
             now = Instant::now();
-            serial_fft::<Bn256>(&mut v2_coeffs, &v2_omega, log_d);
-            /*
             if log_d <= log_threads {
                 serial_fft::<Bn256>(&mut v2_coeffs, &v2_omega, log_d);
             } else {
                 parallel_fft::<Bn256>(&mut v2_coeffs, &worker, &v2_omega, log_d, log_threads);
             }
-            */
             let cpu_dur = now.elapsed().as_secs() * 1000 + now.elapsed().subsec_millis() as u64;
             println!("CPU ({} cores) took {}ms.", 1 << log_threads, cpu_dur);
 
@@ -314,7 +311,6 @@ mod tests {
         }
     }
 
-    /*
     #[test]
     pub fn gpu_fft_many_consistency() {
         let mut rng = rand::thread_rng();
@@ -375,5 +371,4 @@ mod tests {
             println!("============================");
         }
     }
-    */
 }
