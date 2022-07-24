@@ -8,18 +8,10 @@ static FIELD_SRC: &str = include_str!("cl/field.cl");
 static FIELD2_SRC: &str = include_str!("cl/field2.cl");
 static EC_SRC: &str = include_str!("cl/ec.cl");
 static FFT_SRC: &str = include_str!("cl/fft.cl");
-static MULTIEXP_SRC: &str = include_str!("cl/multiexp.cl");
 
 /// Generates the source for FFT and Multiexp operations.
 pub fn gen_source<E: GpuEngine, L: Limb>() -> String {
-    vec![
-        common(),
-        gen_ec_source::<E, L>(),
-        fft("Fr"),
-        multiexp("G1", "Fr"),
-        multiexp("G2", "Fr"),
-    ]
-    .join("\n\n")
+    vec![common(), gen_ec_source::<E, L>(), fft("Fr")].join("\n\n")
 }
 
 /// Generates the source for the elliptic curve and group operations, as defined by `E`.
@@ -50,12 +42,6 @@ fn field2(field2: &str, field: &str) -> String {
 
 fn fft(field: &str) -> String {
     String::from(FFT_SRC).replace("FIELD", field)
-}
-
-fn multiexp(point: &str, exp: &str) -> String {
-    String::from(MULTIEXP_SRC)
-        .replace("POINT", point)
-        .replace("EXPONENT", exp)
 }
 
 /// Trait to implement limbs of different underlying bit sizes.

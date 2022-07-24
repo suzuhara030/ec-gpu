@@ -18,7 +18,6 @@ log = "0.4.14"
 num_cpus = "1.13.0"
 once_cell = "1.8.0"
 pairing = "0.22.0"
-pairing_bn256 = {path="../../pairing", features=["gpu"]}
 rayon = "1.5.1"
 rust-gpu-tools = { version = "0.6.0", default-features = false, optional = true }
 temp-env = "0.2.0"
@@ -26,7 +25,7 @@ thiserror = "1.0.30"
 yastl = "0.1.2"
 
 [dev-dependencies]
-blstrs = { version = "0.5.0", features = ["gpu"] }
+pairing_bn256 = {path="../../pairing", features=["gpu"]}
 rand = "0.8"
 lazy_static = "1.2"
 tempfile = "3.2.0"
@@ -35,7 +34,7 @@ rand_xorshift = "0.3.0"
 criterion = "0.3.5"
 
 [build-dependencies]
-blstrs = "0.5.0"
+pairing_bn256 = {path="../../pairing"}
 ec-gpu = "0.1.0"
 execute = "0.2.9"
 hex = "0.4"

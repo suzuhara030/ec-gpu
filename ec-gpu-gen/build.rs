@@ -8,11 +8,11 @@
     not(feature = "cargo-clippy")
 ))]
 fn main() {
+    use pairing_bn256::bn256::Bn256;
     use std::path::PathBuf;
     use std::process::Command;
     use std::{env, fs};
 
-    use blstrs::Bls12;
     use sha2::{Digest, Sha256};
 
     #[path = "src/source.rs"]
@@ -25,7 +25,7 @@ fn main() {
         return;
     }
 
-    let kernel_source = source::gen_source::<Bls12, source::Limb32>();
+    let kernel_source = source::gen_source::<Bn256, source::Limb32>();
 
     let out_dir = env::var("OUT_DIR").expect("OUT_DIR was not set.");
 
