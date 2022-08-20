@@ -1,14 +1,13 @@
-use ff::Field;
-use pairing_bn256::arithmetic::Engine;
-
 use crate::threadpool::Worker;
+use ff::Field;
+use pairing::arithmetic::Group;
 
 /// Calculate the Fast Fourier Transform on the CPU (single-threaded).
 ///
 /// The input `a` is mutated and contains the result when this function returns. The length of the
 /// input vector must be `2^log_n`.
 #[allow(clippy::many_single_char_names)]
-pub fn serial_fft<E: Engine>(a: &mut [E::Fr], omega: &E::Fr, log_n: u32) {
+pub fn serial_fft<G: Group>(a: &mut [G], omega: &G::Scalar, log_n: u32) {
     fn bitreverse(mut n: u32, l: u32) -> u32 {
         let mut r = 0;
         for _ in 0..l {
@@ -34,14 +33,14 @@ pub fn serial_fft<E: Engine>(a: &mut [E::Fr], omega: &E::Fr, log_n: u32) {
 
         let mut k = 0;
         while k < n {
-            let mut w = E::Fr::one();
+            let mut w = G::Scalar::one();
             for j in 0..m {
                 let mut t = a[(k + j + m) as usize];
-                t *= w;
+                t.group_scale(&w);
                 let mut tmp = a[(k + j) as usize];
-                tmp -= t;
+                tmp.group_sub(&t);
                 a[(k + j + m) as usize] = tmp;
-                a[(k + j) as usize] += t;
+                a[(k + j) as usize].group_add(&t);
                 w *= w_m;
             }
 
@@ -57,10 +56,10 @@ pub fn serial_fft<E: Engine>(a: &mut [E::Fr], omega: &E::Fr, log_n: u32) {
 /// The result is is written to the input `a`.
 /// The number of threads used will be `2^log_threads`.
 /// There must be more items to process than threads.
-pub fn parallel_fft<E: Engine>(
-    a: &mut [E::Fr],
+pub fn parallel_fft<G: Group>(
+    a: &mut [G],
     worker: &Worker,
-    omega: &E::Fr,
+    omega: &G::Scalar,
     log_n: u32,
     log_threads: u32,
 ) {
@@ -68,7 +67,7 @@ pub fn parallel_fft<E: Engine>(
 
     let num_threads = 1 << log_threads;
     let log_new_n = log_n - log_threads;
-    let mut tmp = vec![vec![E::Fr::zero(); 1 << log_new_n]; num_threads];
+    let mut tmp = vec![vec![G::group_zero(); 1 << log_new_n]; num_threads];
     let new_omega = omega.pow_vartime(&[num_threads as u64]);
 
     worker.scope(0, |scope, _| {
@@ -80,20 +79,20 @@ pub fn parallel_fft<E: Engine>(
                 let omega_j = omega.pow_vartime(&[j as u64]);
                 let omega_step = omega.pow_vartime(&[(j as u64) << log_new_n]);
 
-                let mut elt = E::Fr::one();
+                let mut elt = G::Scalar::one();
                 for (i, tmp) in tmp.iter_mut().enumerate() {
                     for s in 0..num_threads {
                         let idx = (i + (s << log_new_n)) % (1 << log_n);
                         let mut t = a[idx];
-                        t *= elt;
-                        *tmp += t;
+                        t.group_scale(&elt);
+                        tmp.group_add(&t);
                         elt *= omega_step;
                     }
                     elt *= omega_j;
                 }
 
                 // Perform sub-FFT
-                serial_fft::<E>(tmp, &new_omega, log_new_n);
+                serial_fft::<G>(tmp, &new_omega, log_new_n);
             });
         }
     });

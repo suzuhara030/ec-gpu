@@ -8,7 +8,7 @@
     not(feature = "cargo-clippy")
 ))]
 fn main() {
-    use pairing_bn256::bn256::Bn256;
+    use pairing::bn256::Bn256;
     use std::path::PathBuf;
     use std::process::Command;
     use std::{env, fs};
