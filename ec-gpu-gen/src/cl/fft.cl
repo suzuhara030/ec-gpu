@@ -10,11 +10,11 @@ DEVICE uint bitreverse(uint n, uint bits) {
 /*
  * FFT algorithm is inspired from: http://www.bealto.com/gpu-fft_group-1.html
  */
-KERNEL void radix_fft(GLOBAL FIELD* x, // Source buffer
-                      GLOBAL FIELD* y, // Destination buffer
+KERNEL void radix_fft(GLOBAL FIELD* x, // Source buffer // POINT* x
+                      GLOBAL FIELD* y, // Destination buffer // POINT* y
                       GLOBAL FIELD* pq, // Precalculated twiddle factors
                       GLOBAL FIELD* omegas, // [omega, omega^2, omega^4, ...]
-                      LOCAL FIELD* u_arg, // Local buffer to store intermediary values
+                      LOCAL FIELD* u_arg, // Local buffer to store intermediary values // POINT* u_arg
                       uint n, // Number of elements
                       uint lgp, // Log2 of `p` (Read more in the link above)
                       uint deg, // 1=>radix2, 2=>radix4, 3=>radix8, ...
@@ -23,9 +23,9 @@ KERNEL void radix_fft(GLOBAL FIELD* x, // Source buffer
 // CUDA doesn't support local buffers ("shared memory" in CUDA lingo) as function arguments,
 // ignore that argument and declare the external memory here instead.
 #ifdef CUDA
-  extern LOCAL FIELD u[];
+  extern LOCAL FIELD u[]; // POINT u[]
 #else
-   LOCAL FIELD* u = u_arg;
+   LOCAL FIELD* u = u_arg; // POINT* u
 #endif
 
   uint lid = GET_LOCAL_ID();
@@ -48,7 +48,7 @@ KERNEL void radix_fft(GLOBAL FIELD* x, // Source buffer
   const FIELD twiddle = FIELD_pow_lookup(omegas, (n >> lgp >> deg) * k);
   FIELD tmp = FIELD_pow(twiddle, counts);
   for(uint i = counts; i < counte; i++) {
-    u[i] = FIELD_mul(tmp, x[i*t]);
+    u[i] = FIELD_mul(tmp, x[i*t]); //x[i*t].POINT_mul(tmp)
     tmp = FIELD_mul(tmp, twiddle);
   }
   BARRIER_LOCAL();
@@ -61,9 +61,9 @@ KERNEL void radix_fft(GLOBAL FIELD* x, // Source buffer
       const uint i0 = (i << 1) - di;
       const uint i1 = i0 + bit;
       tmp = u[i0];
-      u[i0] = FIELD_add(u[i0], u[i1]);
-      u[i1] = FIELD_sub(tmp, u[i1]);
-      if(di != 0) u[i1] = FIELD_mul(pq[di << rnd << pqshift], u[i1]);
+      u[i0] = FIELD_add(u[i0], u[i1]); // POINT_add(u[i0], u[i1])
+      u[i1] = FIELD_sub(tmp, u[i1]); // POINT_sub(tmp, u[i1])
+      if(di != 0) u[i1] = FIELD_mul(pq[di << rnd << pqshift], u[i1]); // u[i1].POINT_mul(pq[di << rnd << pqshift])
     }
 
     BARRIER_LOCAL();

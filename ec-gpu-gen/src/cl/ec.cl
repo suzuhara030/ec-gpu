@@ -118,3 +118,37 @@ DEVICE POINT_projective POINT_add(POINT_projective a, POINT_projective b) {
     return a;
   }
 }
+
+// POINT_mul
+/*
+  fn mul(self, other: &'b $scalar) -> Self::Output {
+    // TODO: make this faster
+
+    let mut acc = $name::identity();
+
+    // This is a simple double-and-add implementation of point
+    // multiplication, moving from most significant to least
+    // significant bit of the scalar.
+    //
+    // NOTE: We skip the leading bit because it's always unset.
+    for bit in other
+      .to_repr()
+      .iter()
+      .rev()
+      .flat_map(|byte| (0..8).rev().map(move |i| Choice::from((byte >> i) & 1u8)))
+      .skip(1)
+    {
+      acc = acc.double();
+      acc = $name::conditional_select(&acc, &(acc + self), bit);
+    }
+
+    acc
+  }
+*/
+
+// POINT_sub
+/*
+  fn sub(self, other: &'a $name) -> $name {
+    self + (-other)
+  }
+*/
