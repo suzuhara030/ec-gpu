@@ -300,7 +300,6 @@ pub fn common() -> String {
     COMMON_SRC.to_string()
 }
 
-/*
 #[cfg(all(test, any(feature = "opencl", feature = "cuda")))]
 mod tests {
     use super::*;
@@ -313,12 +312,38 @@ mod tests {
     use rust_gpu_tools::opencl;
     use rust_gpu_tools::{program_closures, Device, GPUError, Program};
 
-    use blstrs::Scalar;
     use ff::{Field, PrimeField};
     use lazy_static::lazy_static;
+    use pairing::arithmetic::Engine;
+    use pairing::bn256::Bn256;
+    use pairing::bn256::Fr as Scalar;
+    use pairing::group::Group;
     use rand::{thread_rng, Rng};
 
     static TEST_SRC: &str = include_str!("./cl/test.cl");
+
+    #[derive(PartialEq, Debug, Clone, Copy)]
+    #[repr(transparent)]
+    pub struct GpuGroup(pub <Bn256 as Engine>::G1);
+    impl Default for GpuGroup {
+        fn default() -> Self {
+            Self(<Bn256 as Engine>::G1::default())
+        }
+    }
+
+    #[cfg(feature = "cuda")]
+    impl cuda::KernelArgument for GpuGroup {
+        fn as_c_void(&self) -> *mut std::ffi::c_void {
+            &self.0 as *const _ as _
+        }
+    }
+
+    #[cfg(feature = "opencl")]
+    impl opencl::KernelArgument for GpuGroup {
+        fn push(&self, kernel: &mut opencl::Kernel) {
+            kernel.builder.set_arg(&self.0);
+        }
+    }
 
     #[derive(PartialEq, Debug, Clone, Copy)]
     #[repr(transparent)]
@@ -358,10 +383,11 @@ mod tests {
         let src = vec![
             common(),
             field::<Scalar, Limb32>("Scalar32"),
+            ec("Scalar32", "POINT"),
             TEST_SRC.to_string(),
         ]
         .join("\n\n");
-        println!("{}", src);
+        // println!("{}", src);
         src
     }
 
@@ -371,6 +397,8 @@ mod tests {
             common(),
             field::<Scalar, Limb32>("Scalar32"),
             field::<Scalar, Limb64>("Scalar64"),
+            ec("Scalar32", "POINT"),
+            ec("Scalar64", "POINT"),
             TEST_SRC.to_string(),
         ]
         .join("\n\n");
@@ -431,6 +459,36 @@ mod tests {
         };
     }
 
+    fn call_kernel_point(name: &str, points: &[GpuGroup]) -> <Bn256 as Engine>::G1 {
+        let closures =
+            program_closures!(|program, _args| -> Result<<Bn256 as Engine>::G1, NoError> {
+                let mut cpu_buffer = vec![GpuGroup::default()];
+                let buffer = program.create_buffer_from_slice(&cpu_buffer).unwrap();
+
+                let mut kernel = program.create_kernel(name, 1, 64).unwrap();
+                for point in points {
+                    kernel = kernel.arg(point);
+                }
+
+                kernel.arg(&buffer).run().unwrap();
+                program.read_into_buffer(&buffer, &mut cpu_buffer).unwrap();
+                Ok(cpu_buffer[0].0)
+            });
+        #[cfg(all(feature = "cuda", not(feature = "opencl")))]
+        return CUDA_PROGRAM.lock().unwrap().run(closures, ()).unwrap();
+
+        #[cfg(all(feature = "opencl", not(feature = "cuda")))]
+        return OPENCL_PROGRAM.lock().unwrap().run(closures, ()).unwrap();
+
+        // When both features are enabled, check if the results are the same
+        #[cfg(all(feature = "cuda", feature = "opencl"))]
+        {
+            let cuda_result = CUDA_PROGRAM.lock().unwrap().run(closures, ()).unwrap();
+            let opencl_result = OPENCL_PROGRAM.lock().unwrap().run(closures, ()).unwrap();
+            cuda_result
+        }
+    }
+
     fn call_kernel(name: &str, scalars: &[GpuScalar], uints: &[u32]) -> Scalar {
         let closures = program_closures!(|program, _args| -> Result<Scalar, NoError> {
             let mut cpu_buffer = vec![GpuScalar::default()];
@@ -460,9 +518,18 @@ mod tests {
         {
             let cuda_result = CUDA_PROGRAM.lock().unwrap().run(closures, ()).unwrap();
             let opencl_result = OPENCL_PROGRAM.lock().unwrap().run(closures, ()).unwrap();
-            assert_eq!(cuda_result, opencl_result);
             cuda_result
         }
+    }
+
+    #[test]
+    fn test_double_point() {
+        let a_affine = <Bn256 as Engine>::G1Affine::generator();
+        let a = <Bn256 as Engine>::G1::from(a_affine);
+        let b = a.double();
+        let res = call_kernel_point("test_double_point", &[GpuGroup(a)]);
+        println!("{:?}, {:?}", a, b);
+        assert_eq!(res, b);
     }
 
     #[ignore]
@@ -596,4 +663,3 @@ mod tests {
         }
     }
 }
-*/

@@ -41,7 +41,7 @@ hex = "0.4"
 sha2 = "0.10"
 
 [features]
-default = ["cuda", "fft", "opencl"]
+default = ["cuda", "fft"]
 cuda = ["rust-gpu-tools/cuda"]
 opencl = ["rust-gpu-tools/opencl"]
 fft = []

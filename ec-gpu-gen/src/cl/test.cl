@@ -30,6 +30,10 @@ KERNEL void test_double_32(Scalar32 a, GLOBAL Scalar32 *result) {
   *result = Scalar32_double(a);
 }
 
+KERNEL void test_double_point(POINT_projective a, GLOBAL POINT_projective *result) {
+  *result = POINT_double(a);
+}
+
 ////////////
 // CUDA doesn't support 64-bit limbs
 #ifndef CUDA

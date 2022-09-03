@@ -268,6 +268,7 @@ mod tests {
         omega
     }
 
+    #[ignore]
     #[test]
     pub fn gpu_fft_consistency() {
         let mut rng = rand::thread_rng();
