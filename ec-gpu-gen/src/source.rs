@@ -22,15 +22,16 @@ pub fn gen_ec_source<E: GpuEngine, L: Limb>() -> String {
         field::<E::Scalar, L>("Fr"),
         field::<E::Fp, L>("Fq"),
         field2("Fq2", "Fq"),
-        ec("Fq", "G1"),
-        ec("Fq2", "G2"),
+        ec("Fq", "Fr", "G1"),
+        ec("Fq2", "Fr", "G2"),
     ]
     .join("\n\n")
 }
 
-fn ec(field: &str, point: &str) -> String {
+fn ec(field: &str, scalar: &str, point: &str) -> String {
     String::from(EC_SRC)
         .replace("FIELD", field)
+        .replace("SCALAR", scalar)
         .replace("POINT", point)
 }
 
@@ -316,7 +317,7 @@ mod tests {
     use lazy_static::lazy_static;
     use pairing::arithmetic::Engine;
     use pairing::bn256::Bn256;
-    use pairing::bn256::Fq as Scalar;
+    use pairing::bn256::{Fq, Fr as Scalar};
     use pairing::group::Group;
     use rand::{thread_rng, Rng};
 
@@ -382,8 +383,9 @@ mod tests {
     fn source_cuda() -> String {
         let src = vec![
             common(),
+            field::<Fq, Limb32>("Fq"),
             field::<Scalar, Limb32>("Scalar32"),
-            ec("Scalar32", "POINT"),
+            ec("Fq", "Scalar32", "POINT"),
             TEST_SRC.to_string(),
         ]
         .join("\n\n");
@@ -395,14 +397,16 @@ mod tests {
     fn source_opencl() -> String {
         let src = vec![
             common(),
+            field::<Fq, Limb32>("Fq32"),
+            field::<Fq, Limb64>("Fq64"),
             field::<Scalar, Limb32>("Scalar32"),
             field::<Scalar, Limb64>("Scalar64"),
-            ec("Scalar32", "POINT"),
-            ec("Scalar64", "POINT"),
+            ec("Fq32", "Scalar32", "POINT"),
+            ec("Fq64", "Scalar64", "POINT"),
             TEST_SRC.to_string(),
         ]
         .join("\n\n");
-        println!("{}", src);
+        // println!("{}", src);
         src
     }
 
@@ -417,6 +421,7 @@ mod tests {
             let source_path = tmpdir.path().join("kernel.cu");
             fs::write(&source_path, source_cuda().as_bytes())
                 .expect("Cannot write kernel source file.");
+            println!("{}", &source_path.display());
             let fatbin_path = tmpdir.path().join("kernel.fatbin");
 
             let nvcc = Command::new("nvcc")
@@ -459,7 +464,11 @@ mod tests {
         };
     }
 
-    fn call_kernel_point(name: &str, points: &[GpuGroup]) -> <Bn256 as Engine>::G1 {
+    fn call_kernel_point(
+        name: &str,
+        points: &[GpuGroup],
+        scalars: &[GpuScalar],
+    ) -> <Bn256 as Engine>::G1 {
         let closures =
             program_closures!(|program, _args| -> Result<<Bn256 as Engine>::G1, NoError> {
                 let mut cpu_buffer = vec![GpuGroup::default()];
@@ -468,6 +477,10 @@ mod tests {
                 let mut kernel = program.create_kernel(name, 1, 64).unwrap();
                 for point in points {
                     kernel = kernel.arg(point);
+                }
+
+                for scalar in scalars {
+                    kernel = kernel.arg(scalar);
                 }
 
                 kernel.arg(&buffer).run().unwrap();
@@ -522,15 +535,59 @@ mod tests {
         }
     }
 
+    #[ignore]
     #[test]
     fn test_double_point() {
         let a_affine = <Bn256 as Engine>::G1Affine::generator();
         let mut a = <Bn256 as Engine>::G1::from(a_affine);
         for _ in 0..3 {
             let b = a.double();
-            let res = call_kernel_point("test_double_point", &[GpuGroup(a)]);
+            let res = call_kernel_point("test_double_point", &[GpuGroup(a)], &[]);
             assert_eq!(res, b);
             a = b;
+        }
+    }
+
+    #[ignore]
+    #[test]
+    fn test_add_point() {
+        let a_affine = <Bn256 as Engine>::G1Affine::generator();
+        let mut a = <Bn256 as Engine>::G1::from(a_affine);
+        for _ in 0..10 {
+            let b = a.double();
+            let c = a + b;
+            let res = call_kernel_point("test_add_point", &[GpuGroup(a), GpuGroup(b)], &[]);
+            assert_eq!(res, c);
+            a = c;
+        }
+    }
+
+    #[ignore]
+    #[test]
+    fn test_sub_point() {
+        let a_affine = <Bn256 as Engine>::G1Affine::generator();
+        let mut a = <Bn256 as Engine>::G1::from(a_affine);
+        for _ in 0..10 {
+            let b = a.double().double();
+            let c = b - a;
+            let res = call_kernel_point("test_sub_point", &[GpuGroup(b), GpuGroup(a)], &[]);
+            assert_eq!(res, c);
+            a = c;
+        }
+    }
+
+    #[test]
+    fn test_mul_point() {
+        let a_affine = <Bn256 as Engine>::G1Affine::generator();
+        let mut a = <Bn256 as Engine>::G1::from(a_affine);
+        // let mut rng = thread_rng();
+        for _ in 0..1 {
+            // let b = Scalar::random(&mut rng);
+            let b = Scalar::from_raw([0x1, 0x0, 0x0, 0x0]);
+            let c = a * b;
+            let res = call_kernel_point("test_mul_point", &[GpuGroup(a)], &[GpuScalar(b)]);
+            assert_eq!(res, c);
+            a = c;
         }
     }
 
@@ -596,7 +653,6 @@ mod tests {
         }
     }
 
-    #[ignore]
     #[test]
     fn test_pow() {
         let mut rng = thread_rng();

@@ -135,29 +135,29 @@ DEVICE POINT_projective POINT_add(POINT_projective a, POINT_projective b) {
   }
 }
 
-// POINT_mul
-/*
-  fn mul(self, other: &'b $scalar) -> Self::Output {
-    // TODO: make this faster
+DEVICE POINT_projective POINT_neg(POINT_projective a) {
+  a.y = FIELD_neg(a.y);
+  return a;
+}
 
-    let mut acc = $name::identity();
+DEVICE POINT_projective POINT_sub(POINT_projective a, POINT_projective b) {
+  return POINT_add(a, POINT_neg(b));
+}
 
-    // This is a simple double-and-add implementation of point
-    // multiplication, moving from most significant to least
-    // significant bit of the scalar.
-    //
-    // NOTE: We skip the leading bit because it's always unset.
-    for bit in other
-      .to_repr()
-      .iter()
-      .rev()
-      .flat_map(|byte| (0..8).rev().map(move |i| Choice::from((byte >> i) &
-  1u8))) .skip(1)
-    {
-      acc = acc.double();
-      acc = $name::conditional_select(&acc, &(acc + self), bit);
+// This is a simple double-and-add implementation of point multiplication,
+// moving from most significant to least significant bit of the FIELD
+DEVICE POINT_projective POINT_mul(POINT_projective a, SCALAR b) {
+  POINT_projective res = a;
+  bool flag = false;
+
+  for (uint i = 0; i < SCALAR_BITS; i++) {
+    if (flag) {
+      res = POINT_double(res);
+      if (SCALAR_get_bit(b, i)) {
+        res = POINT_add(res, a);
+      }
     }
-
-    acc
+    flag = flag | SCALAR_get_bit(b, i);
   }
-*/
+  return res;
+}

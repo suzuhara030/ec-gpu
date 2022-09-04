@@ -70,6 +70,9 @@ DEVICE FIELD FIELD_add(FIELD a, FIELD b) {
   return res;
 }
 
+// Modular negation
+DEVICE FIELD FIELD_neg(FIELD a) { return FIELD_sub(FIELD_P, a); }
+
 #ifdef CUDA
 // Code based on the work from Supranational, with special thanks to Niall
 // Emmart:

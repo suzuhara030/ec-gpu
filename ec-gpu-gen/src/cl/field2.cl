@@ -27,7 +27,11 @@ DEVICE FIELD2 FIELD2_double(FIELD2 a) {
   a.c1 = FIELD_double(a.c1);
   return a;
 }
-
+DEVICE FIELD2 FIELD2_neg(FIELD2 a) {
+  a.c0 = FIELD_neg(a.c0);
+  a.c1 = FIELD_neg(a.c1);
+  return a;
+}
 /*
  * (a_0 + u * a_1)(b_0 + u * b_1) = a_0 * b_0 - a_1 * b_1 + u * (a_0 * b_1 + a_1
  * * b_0) Therefore: c_0 = a_0 * b_0 - a_1 * b_1 c_1 = (a_0 * b_1 + a_1 * b_0) =

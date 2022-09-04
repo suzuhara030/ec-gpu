@@ -30,8 +30,24 @@ KERNEL void test_double_32(Scalar32 a, GLOBAL Scalar32 *result) {
   *result = Scalar32_double(a);
 }
 
-KERNEL void test_double_point(POINT_projective a, GLOBAL POINT_projective *result) {
+KERNEL void test_double_point(POINT_projective a,
+                              GLOBAL POINT_projective *result) {
   *result = POINT_double(a);
+}
+
+KERNEL void test_add_point(POINT_projective a, POINT_projective b,
+                           GLOBAL POINT_projective *result) {
+  *result = POINT_add(a, b);
+}
+
+KERNEL void test_sub_point(POINT_projective a, POINT_projective b,
+                           GLOBAL POINT_projective *result) {
+  *result = POINT_sub(a, b);
+}
+
+KERNEL void test_mul_point(POINT_projective a, Scalar32 b,
+                           GLOBAL POINT_projective *result) {
+  *result = POINT_mul(a, b);
 }
 
 ////////////
