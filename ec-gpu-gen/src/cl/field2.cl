@@ -29,10 +29,9 @@ DEVICE FIELD2 FIELD2_double(FIELD2 a) {
 }
 
 /*
- * (a_0 + u * a_1)(b_0 + u * b_1) = a_0 * b_0 - a_1 * b_1 + u * (a_0 * b_1 + a_1 * b_0)
- * Therefore:
- * c_0 = a_0 * b_0 - a_1 * b_1
- * c_1 = (a_0 * b_1 + a_1 * b_0) = (a_0 + a_1) * (b_0 + b_1) - a_0 * b_0 - a_1 * b_1
+ * (a_0 + u * a_1)(b_0 + u * b_1) = a_0 * b_0 - a_1 * b_1 + u * (a_0 * b_1 + a_1
+ * * b_0) Therefore: c_0 = a_0 * b_0 - a_1 * b_1 c_1 = (a_0 * b_1 + a_1 * b_0) =
+ * (a_0 + a_1) * (b_0 + b_1) - a_0 * b_0 - a_1 * b_1
  */
 DEVICE FIELD2 FIELD2_mul(FIELD2 a, FIELD2 b) {
   const FIELD aa = FIELD_mul(a.c0, b.c0);
