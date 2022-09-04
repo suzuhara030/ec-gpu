@@ -316,7 +316,7 @@ mod tests {
     use lazy_static::lazy_static;
     use pairing::arithmetic::Engine;
     use pairing::bn256::Bn256;
-    use pairing::bn256::Fr as Scalar;
+    use pairing::bn256::Fq as Scalar;
     use pairing::group::Group;
     use rand::{thread_rng, Rng};
 
@@ -525,11 +525,13 @@ mod tests {
     #[test]
     fn test_double_point() {
         let a_affine = <Bn256 as Engine>::G1Affine::generator();
-        let a = <Bn256 as Engine>::G1::from(a_affine);
-        let b = a.double();
-        let res = call_kernel_point("test_double_point", &[GpuGroup(a)]);
-        println!("{:?}, {:?}", a, b);
-        assert_eq!(res, b);
+        let mut a = <Bn256 as Engine>::G1::from(a_affine);
+        for _ in 0..3 {
+            let b = a.double();
+            let res = call_kernel_point("test_double_point", &[GpuGroup(a)]);
+            assert_eq!(res, b);
+            a = b;
+        }
     }
 
     #[ignore]
