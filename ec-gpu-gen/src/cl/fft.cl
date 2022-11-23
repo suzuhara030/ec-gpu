@@ -85,14 +85,14 @@ KERNEL void FIELD_eval_h_lookups(
   GLOBAL FIELD* l_last,
   GLOBAL FIELD* l_active_row,
   GLOBAL FIELD* y_beta_gamma,
-  uint32_t rot_scale,
-  uint32_t size
+  uint rot_scale,
+  uint size
 ) {
   uint gid = GET_GLOBAL_ID();
   uint idx = gid;
 
-  uint32_t r_next = (idx + rot_scale) & (size - 1);
-  uint32_t r_prev = (idx + size - rot_scale) & (size - 1);
+  uint r_next = (idx + rot_scale) & (size - 1);
+  uint r_prev = (idx + size - rot_scale) & (size - 1);
 
   // l_0(X) * (1 - z(X)) = 0
   value[idx] = FIELD_mul(value[idx], y_beta_gamma[0]);
@@ -134,4 +134,30 @@ KERNEL void FIELD_eval_h_lookups(
   tmp = FIELD_mul(tmp, tmp2);
   tmp = FIELD_mul(tmp, l_active_row[idx]);
   value[idx] = FIELD_add(value[idx], tmp);
+}
+
+KERNEL void FIELD_sort(
+  GLOBAL FIELD* value,
+  uint i,
+  uint j
+) {
+  uint gid = GET_GLOBAL_ID();
+  uint id = gid;
+
+  printf("id is %u\n", id);
+
+  uint direction = (id >> i) & 1;
+  uint log_step = i - j;
+  uint step = 1 << log_step;
+  uint offset = id & (step - 1);
+  uint index0 = ((id >> log_step) << (log_step + 1)) | offset;
+  uint index1 = index0 | step;
+
+  printf("index0 %u index1 %u direction %u compare %u\n", index0, index1, direction, FIELD_gte(value[index0], value[index1]));
+  if (FIELD_gte(value[index0], value[index1]) ^ direction) 
+  {
+    FIELD t = value[index0];
+    value[index0] = value[index1];
+    value[index1] = t;
+  }
 }

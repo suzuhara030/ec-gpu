@@ -10,6 +10,7 @@ use ec_gpu_gen::{
     threadpool::Worker,
 };
 use ff::{Field, PrimeField};
+use rayon::slice::ParallelSliceMut;
 
 fn omega<F: PrimeField>(num_coeffs: usize) -> F {
     // Compute omega, the 2^exp primitive root of unity
@@ -19,6 +20,57 @@ fn omega<F: PrimeField>(num_coeffs: usize) -> F {
         omega = omega.square();
     }
     omega
+}
+
+#[test]
+pub fn gpu_sort_consistency() {
+    fil_logger::maybe_init();
+    let mut rng = rand::thread_rng();
+
+    let worker = Worker::new();
+    let log_threads = worker.log_num_threads();
+    let devices = Device::all();
+    let programs = devices
+        .iter()
+        .map(|device| ec_gpu_gen::program!(device))
+        .collect::<Result<_, _>>()
+        .expect("Cannot create programs!");
+    let mut kern = FftKernel::<Fr>::create(programs).expect("Cannot initialize kernel!");
+
+    for log_d in 1..=1 {
+        let d = 1 << log_d;
+
+        let mut v1_coeffs = (0..d).map(|_| Fr::random(&mut rng)).collect::<Vec<_>>();
+        let mut v2_coeffs = v1_coeffs.clone();
+
+        println!("Testing Sort for {:?} elements...", v1_coeffs);
+        
+        println!("0 {:?}", v1_coeffs[0].to_bytes_le());
+        println!("1 {:?}", v1_coeffs[1].to_bytes_le());
+
+        let mut now = Instant::now();
+        kern.kernels[0]
+            .sort(&mut v1_coeffs, log_d)
+            .expect("GPU SORT failed!");
+        let gpu_dur = now.elapsed().as_secs() * 1000 + now.elapsed().subsec_millis() as u64;
+        println!("GPU took {}ms.", gpu_dur);
+        for i in 0..v1_coeffs.len() - 1 {
+            if !(v1_coeffs[i] < v1_coeffs[i + 1]) {
+                println!("{:?} {:?}", v1_coeffs[i], v1_coeffs[i+ 1]);
+            }
+        }
+
+
+        now = Instant::now();
+        v2_coeffs.sort();
+        let cpu_dur = now.elapsed().as_secs() * 1000 + now.elapsed().subsec_millis() as u64;
+        println!("CPU ({} cores) took {}ms.", 1 << log_threads, cpu_dur);
+
+        println!("Speedup: x{}", cpu_dur as f32 / gpu_dur as f32);
+
+        assert!(v1_coeffs == v2_coeffs);
+        println!("============================");
+    }
 }
 
 #[test]
@@ -36,7 +88,7 @@ pub fn gpu_fft_consistency() {
         .expect("Cannot create programs!");
     let mut kern = FftKernel::<Fr>::create(programs).expect("Cannot initialize kernel!");
 
-    for log_d in 1..=20 {
+    for log_d in 23..=23 {
         let d = 1 << log_d;
 
         let mut v1_coeffs = (0..d).map(|_| Fr::random(&mut rng)).collect::<Vec<_>>();
